@@ -9,7 +9,7 @@ $Excel_writer = new Xlsx($spreadsheet);  /*----- Excel (Xls) Object*/
 $spreadsheet->setActiveSheetIndex(0);
 $activeSheet = $spreadsheet->getActiveSheet();
 
-
+require_once('config.php');
 require_once('database.class.php');
 $conn = new Database();
 // Create an instance of the class:

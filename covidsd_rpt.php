@@ -1,173 +1,216 @@
 <?php
-    // Require composer autoload
-    require_once __DIR__ . '/vendor/autoload.php';  // <-- Using Composer - En utilisant Composer
-    use PhpOffice\PhpSpreadsheet\Spreadsheet;
-    use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-    $plantilla='COVIDSD';                          // <-- Clase de Plantilla [Adulto Mayor]
-    $spreadsheet  = new Spreadsheet();              /*----Spreadsheet object-----*/
-    $Excel_writer = new Xlsx($spreadsheet);         /*----- Excel (Xls) Object*/
-    $spreadsheet->setActiveSheetIndex(0);
-    $activeSheet  = $spreadsheet->getActiveSheet();
+// Require composer autoload
+require_once __DIR__ . '/vendor/autoload.php';
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-    $campos_mpl = "";           // <-- Variable que contiene los campos de la plantilla, para el llamado al SP
-    $qry        = "";           // <-- Consulta de Campos
+$plantilla='COVIDSD';
+$spreadsheet  = new Spreadsheet();  /*----Spreadsheet object-----*/
+$Excel_writer = new Xlsx($spreadsheet);  /*----- Excel (Xls) Object*/
+$spreadsheet->setActiveSheetIndex(0);
+$activeSheet  = $spreadsheet->getActiveSheet();
 
-    require_once('database.class.php');
-    $conn = new Database();
+$subconsulta = "";
 
-    // Create an instance of the class:
-    // $mpdf = new \Mpdf\Mpdf();
-    // $mpdf->setFooter('{PAGENO}');
+require_once('config.php');
+require_once('database.class.php');
+$conn = new Database();
 
-    if(!isset($_POST['idsede'])){
-        $idsede='';
-    }else{
-        $idsede=$_POST['idsede'];
-    }
+if (!isset($_POST['idsede'])){
+    $idsede='';
+} else {
+    $idsede=$_POST['idsede'];
+}
 
-    $parts = explode('-', $_POST['fechaini']);
-    $fechaini  = $parts[2].'/'.$parts[1].'/'.$parts[0];
+$parts     = explode('-', $_POST['fechaini']);
+$fechaini  = $parts[2].'/'.$parts[1].'/'.$parts[0];
 
-    $parts = explode('-', $_POST['fechafin']);
-    $fechafin  = $parts[2].'/'.$parts[1].'/'.$parts[0];
+$parts     = explode('-', $_POST['fechafin']);
+$fechafin  = $parts[2].'/'.$parts[1].'/'.$parts[0];
 
-    $fechaini.=' 00:00:00.000';
-    $fechafin.=' 23:59:59.997';
+$fechaini.=' 00:00:00.000';
+$fechafin.=' 23:59:59.997';
 
-    $cabecera="
-    SELECT 'IDADMINISTRADORA' AS CAMPO, 'IDADMINISTRADORA' AS DESCCAMPO
-    UNION ALL
-    SELECT 'RAZONSOCIAL' AS CAMPO,'EPS' AS DESCCAMPO
-    UNION ALL 
-    SELECT 'TIPO_DOC' AS CAMPO, 'TIPO_DOC' AS DESCCAMPO
-    UNION ALL
-    SELECT 'IDAFILIADO' AS CAMPO, 'IDAFILIADO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'PNOMBRE' AS CAMPO, 'PNOMBRE' AS DESCCAMPO
-    UNION ALL
-    SELECT 'SNOMBRE' AS CAMPO, 'SNOMBRE' AS DESCCAMPO
-    UNION ALL
-    SELECT 'PAPELLIDO' AS CAMPO, 'PAPELLIDO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'SAPELLIDO' AS CAMPO, 'SAPELLIDO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'FNACIMIENTO' AS CAMPO, 'FNACIMIENTO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'EDAD' AS CAMPO, 'EDAD' AS DESCCAMPO
-    UNION ALL
-    SELECT 'SEXO' AS CAMPO, 'SEXO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'DIRECCION' AS CAMPO, 'DIRECCION' AS DESCCAMPO
-    UNION ALL
-    SELECT 'TELEFONORES' AS CAMPO, 'TELEFONO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'GRUPOETNICO' AS CAMPO, 'GRUPOETNICO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'CONSECUTIVO' AS CAMPO, 'CONSECUTIVO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'IDSEDE' AS CAMPO, 'IDSEDE' AS DESCCAMPO
-    UNION ALL
-    SELECT 'SEDE' AS CAMPO, 'SEDE' AS DESCCAMPO
-    UNION ALL
-    SELECT 'FECHA' AS CAMPO, 'FECHA' AS DESCCAMPO
-    UNION ALL
-    SELECT 'CLASEPLANTILLA' AS CAMPO, 'CLASEPLANTILLA' AS DESCCAMPO
-    UNION ALL
-    SELECT 'TIPO_USUARIO' AS CAMPO, 'TIPO_USUARIO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'ESPECIALIDAD' AS CAMPO, 'ESPECIALIDAD' AS DESCCAMPO
-    UNION ALL
-    SELECT 'IDMEDICO' AS CAMPO, 'IDMEDICO' AS DESCCAMPO
-    UNION ALL
-    SELECT 'MEDICO' AS CAMPO, 'MEDICO' AS DESCCAMPO
-    UNION ALL
-    select CAMPO, DESCCAMPO from mpld where CLASEPLANTILLA='$plantilla' and CAMPO<>'Sexo' and CAMPO<>'EDAD' and ltrim(rtrim(tipo_campo)) not in ('Titulo','Subtitulo')";
-    
-    /*
-    and campo in('LEEYESC', 'CLASIFADOLE', 'CLASIFIADOL2', 'ANAMNESIS', 'MOTICON', 'ENFEACT', 'ANTECE', 
-    'ANTEPERSO', 'PATOLOGI', 'ENFECARDI', 'INSRENA', 'DBTM', 'DISLIPI', 'OBESID', 'HOSPQUIRU', 'HOSPITA2', 'ANTQX', 'QX2', 'ANTALER', 'ALERG', 'ANTTRAU', 'TRAUMA', 'ANTTOXI',
-    'Tabaquismo', 'Frecuencia', 'HUMOVAPOR', 'CUAL', 'Frecuencia2', 'SUSTPSICO', 'CUAL2', 'frecuencia3', 'ALCOHOL', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '')";
-    */
-    // SE ARMA LA CONSULTA PARA CONCATENAR EN EL LLAMADO AL STORED PROCEDURE
+$columnas = array(
+	"IDADMINISTRADORA",
+	"RAZONSOCIAL",
+	"TIPO_DOC",
+	"IDAFILIADO",
+	"PAPELLIDO",
+	"SAPELLIDO",
+	"PNOMBRE",
+	"SNOMBRE",
+	"FNACIMIENTO",
+	"EDAD",
+	"SEXO",
+	"DIRECCION",
+	"TELEFONORES",
+	"GRUPOETNICO",
+	"TIPODISCAPACIDAD",
+	"ESTADOCIVIL",
+	"IDESCOLARIDAD",
+	"OCUPACIONC",
+	"CONSECUTIVO",
+	"IDSEDE",
+	"FECHA",
+	"CLASEPLANTILLA",
+	"TIPO_USUARIO",
+	"IDMEDICO",
+	"MEDICO",
+	"ESPECIALIDADM",
+	"NOHISTO",
+	"HISTORI",
+	"RESPSEG",
+	"FESEGUI",
+	"HOSEGHI",
+	"DIASEGUI",
+	"ESTSALUD",
+	"DESCEST",
+	"FIEBM38",
+	"DESCFIE",
+	"TOS",
+	"DESCTOS",
+	"DIFRESP",
+	"DESCDIF",
+	"ODINOFAG",
+	"DESCODI",
+	"FATIGA",
+	"DESCFAT",
+	"CUMREC",
+	"DESCREC",
+	"OBSHC",
+	"CLAFECH"
+);
+	
+$cabecera = array(
+	"IDADMINISTRADORA",
+	"RAZONSOCIAL",
+	"TIPO_DOC",
+	"IDAFILIADO",
+	"PAPELLIDO",
+	"SAPELLIDO",
+	"PNOMBRE",
+	"SNOMBRE",
+	"FNACIMIENTO",
+	"EDAD",
+	"SEXO",
+	"DIRECCION",
+	"TELEFONORES",
+	"GRUPOETNICO",
+	"TIPODISCAPACIDAD",
+	"ESTADOCIVIL",
+	"IDESCOLARIDAD",
+	"OCUPACIONC",
+	"CONSECUTIVO",
+	"IDSEDE",
+	"FECHA",
+	"CLASEPLANTILLA",
+	"TIPO_USUARIO",
+	"IDMEDICO",
+	"MEDICO",
+	"ESPECIALIDADM",
+	"NOHISTO",
+	"HISTORI",
+	"RESPSEG",
+	"FESEGUI",
+	"HOSEGHI",
+	"DIASEGUI",
+	"ESTSALUD",
+	"DESCEST",
+	"FIEBM38",
+	"DESCFIE",
+	"TOS",
+	"DESCTOS",
+	"DIFRESP",
+	"DESCDIF",
+	"ODINOFAG",
+	"DESCODI",
+	"FATIGA",
+	"DESCFAT",
+	"CUMREC",
+	"DESCREC",
+	"OBSHC",
+	"CLAFECH"
+);
 
-    $qry = "SELECT CAMPO,DESCCAMPO FROM mpld WHERE CLASEPLANTILLA='$plantilla' and CAMPO<>'Sexo' and CAMPO<>'EDAD' and ltrim(rtrim(tipo_campo)) not in ('Titulo','Subtitulo')";
-    $cmp = $conn->prepare($qry);
+$x=1;
+$y=1;
 
-    $cmp->execute();
+for($i=0;$i<count($cabecera);$i++){
+    $activeSheet->setCellValueByColumnAndRow($x,$y,$cabecera[$i]);
+    $x++;
+}
 
-    $res        = $cmp->fetchall(PDO::FETCH_ASSOC);
-    $campos_mpl = "";
+$subconsulta = "Select 
+		AFI.IDADMINISTRADORA,
+		TER.RAZONSOCIAL,
+		AFI.TIPO_DOC, 
+		HCA.IDAFILIADO,
+		COALESCE(AFI.PAPELLIDO,'''') AS PAPELLIDO, 
+		COALESCE(AFI.SAPELLIDO,'''') AS SAPELLIDO, 
+		COALESCE(AFI.PNOMBRE,'''') AS PNOMBRE, 
+		COALESCE(AFI.SNOMBRE,'''') AS SNOMBRE,  
+		CONVERT(VARCHAR(12),AFI.FNACIMIENTO,103) AS FNACIMIENTO,
+		dbo.fna_EdadenAnos(AFI.FNACIMIENTO,HCA.FECHA) AS EDAD, 
+		AFI.SEXO,	
+		AFI.DIRECCION,
+		AFI.TELEFONORES,
+		COALESCE(t1.DESCRIPCION,'') AS GRUPOETNICO, 
+		COALESCE(t2.DESCRIPCION,'') AS TIPODISCAPACIDAD, 
+		COALESCE(t3.DESCRIPCION,'') AS ESTADOCIVIL, 
+		COALESCE(t4.DESCRIPCION,'NINGUNO') AS IDESCOLARIDAD, 
+		COALESCE(OCU.DESCRIPCION,'') AS OCUPACIONC, 
+		HCAD.CONSECUTIVO, 
+		SUBSTRING(ltrim(rtrim(HCAD.CONSECUTIVO)), 1, 2) as IDSEDE,
+		HCA.FECHA, 
+		HCAD.CLASEPLANTILLA, 
+		MED.TIPO_USUARIO,
+		HCA.IDMEDICO, 
+		MED.NOMBRE AS MEDICO,   
+		MED.IDEMEDICA AS ESPECIALIDADM,
+		HCAD.CAMPO AS [CAMPO], 
+	    (case hcad.TIPOCAMPO when 'Alfanumerico' then coalesce(hcad.ALFANUMERICO,'') when 'Lista' then coalesce(hcad.ALFANUMERICO,'') + coalesce(hcad.LISTA,'') when 'Fecha' then CONVERT(VARCHAR(10),hcad.FECHA,103) when 'Memo' then CAST(hcad.MEMO AS varchar(500)) end) AS VARIABLE
+	FROM 
+		hca with (nolock) inner join HCAD with (nolock) on hcad.CONSECUTIVO=hca.CONSECUTIVO
+		INNER JOIN AFI ON AFI.IDAFILIADO=HCA.IDAFILIADO 
+		INNER JOIN TER ON TER.IDTERCERO=AFI.IDADMINISTRADORA 
+		INNER JOIN MED ON MED.IDMEDICO=HCA.IDMEDICO 
+		LEFT JOIN SED ON SED.IDSEDE=HCA.IDSEDE 
+		LEFT JOIN TGEN t1 ON t1.tabla='AFI' and t1.campo='GRUPOETNICO' and AFI.GRUPOETNICO=t1.CODIGO	
+		LEFT JOIN TGEN t2 ON t2.tabla='AFI' and t2.campo='TIPODISCAPACIDAD' and AFI.TIPODISCAPACIDAD=t2.CODIGO
+		LEFT JOIN TGEN t3 ON t3.tabla='AFI' and t3.campo='ESTADO_CIVIL' and AFI.ESTADO_CIVIL=t3.CODIGO
+		LEFT JOIN TGEN t4 ON t4.tabla='AFI' and t4.campo='IDESCOLARIDAD' and AFI.IDESCOLARIDAD=t4.CODIGO
+		LEFT JOIN OCU ON AFI.IDOCUPACION=OCU.OCUPACION
+	WHERE  
+		HCA.CLASEPLANTILLA='COVIDSD' and HCA.fecha between '$fechaini' and '$fechafin'";
 
-    foreach($res as $row) {
-        $campos_mpl .= "[" . $row['CAMPO'] . "],";
-    }
+if( $idsede != '' ) {
+	// $subconsulta.= " and HCA.IDSEDE='".$idsede."'";
+	$subconsulta.= " and SUBSTRING(ltrim(rtrim(HCAD.CONSECUTIVO)), 1, 2)='".$idsede."'";
+}		
 
-    $campos_mpl = substr($campos_mpl, 0, -1);
+$consulta = "SELECT * FROM (" . $subconsulta . "
+)PIV PIVOT(MAX(VARIABLE) FOR CAMPO IN ([NOHISTO],[HISTORI],[RESPSEG],[FESEGUI],[HOSEGHI],[DIASEGUI],[ESTSALUD],[DESCEST],[FIEBM38],[DESCFIE],[TOS],[DESCTOS],[DIFRESP],[DESCDIF],[ODINOFAG],[DESCODI],[FATIGA],[DESCFAT],[CUMREC],[DESCREC],[OBSHC],[CLAFECH])) X";
 
-    /* Forma anterior de realizar el encabezado */
+$sth = $conn->prepare($consulta);
+$sth->execute();
 
-    /*$columnas=array("SEDE","RAZONSOCIAL","FECHA","TIPO_DOC","IDAFILIADO","PNOMBRE","SNOMBRE","PAPELLIDO","SAPELLIDO",
-        "FNACIMIENTO","EDAD","DIRECCION","SEXO","TELEFONORES","GRUPOETNICO","FECHADIAG", "FECHAINGRE", "DBTM", "PESO",
-        "TALLA ", "IMC", "PERI",     "TAD", "TAS", "TAM", "TAS1", "TAD1", "TAM1", "TAS2", "TAD2", "TAM2",
-        "CLALHTA", "RESUL12", "RESULT", "FECHAHEMOGRA", "RESULGLIBA", "FECHAGLICEMB",
-        "RESULCRESTI", "FECHCREATI", "RESULTCOLE", "FECHACOLET", "RESULHDL", "FECHAHDL",
-        "FECHALDL", "RESULLDL", "RESULTRIGL", "FECHATRIGLI", "RESULPOTA", "FECHAPOTAS",
-        "RESULORINA", "FECHACITOQUI", "RESULEKG", "FECHAEKG", "RESURX", "FECHARX",
-        "TASA", "ESTRAHTA", "IECA", "ARA II", "CRITERI", "REMITIDO", "MOTIVOREM",
-        "ESPECIALI", "PROXIMOCON", "FECHAPRO");
-
-    $cabecera=array("SEDE","RAZONSOCIAL","FECHA","TIPO_DOC","IDAFILIADO","PNOMBRE","SNOMBRE","PAPELLIDO","SAPELLIDO",
-        "FNACIMIENTO","EDAD","DIRECCION","SEXO","TELEFONO","GRUPOETNICO","Fecha diagnostico", "FECHA DE INGRESO AL PROGRAMA",
-        "Diabetes mellitus", "Peso", "Talla", "IMC", "Perimetro abdominal ", "Sistolica mmHg (sentado)",
-        "Diastolica mmHg (sentado)", "Media mmHg (sentado)", "Sistolica mmHg (acostado)", "Diatolica mmHg (acostado)",
-        "Media mmHg (acostado)", "Sistolica mmHg  (de pie)", "Diastolica mmHg (de pie)", "Media mmHg (de pie)",
-        "Clasificacion de la presion arterial", "Resultado Hemoglobina gr/dL", "Resultado Hemograma ",
-        "Fecha Hemograma ", "Resultado Glicemia basal mg/dL", "Fecha Glicemia basal",
-        "Resultado creatinina serica mg/dL", "Fecha creatinina serica", "Resultado colesterol total mg/dL",
-        "Fecha colesterol total", "Resultado HDL mg/dL", "Fecha HDL", "Fecha LDL", "Resultado LDL mg/dL",
-        "Resultado trigliceridos mg/dL", "Fecha Trigliceridos ", "Resultado potasio mEq/L",
-        "Fecha potasio", "Resultado citoquimico de orina ", "Fecha citoquimico de orina ",
-        "Resultado EKG", "Fecha EKG", "Resultado radiografia de torax", "Fecha radiografia de torax",
-        "Tasa de filtracion glomerular", "Clasificacion del riesgo ", "Paciente recibe IECA",
-        "Paciente recibe ARA II", "Criterio de control", "Remitido", "Motivo de remision ",
-        "Especialidad ", "Proximo control ", "Fecha Proximo control");*/
-
-    /** Se ejecuta la consulta de los encabezados y se arma el encabezado de Excel */
-
-    $sth = $conn->prepare($cabecera);
-    $sth->execute();
-    $result = $sth->fetchall(PDO::FETCH_ASSOC);
-    $x=1;
-    $y=1;
-    foreach($result as $row) {
-        $activeSheet->setCellValueByColumnAndRow($x,$y,$row['DESCCAMPO']);
+$x=1;
+$y=2;
+while ($row = $sth->fetch())
+{
+    for($i=0;$i<count($columnas);$i++){
+        $activeSheet->setCellValueByColumnAndRow($x,$y,preg_replace(array('/--/','/\+\+/','/==/'), ' ',$row[$columnas[$i]]));
         $x++;
     }
-
-    // exec spV_HCA_Pivot '$fechaini','$fechafin','NEGPYP','$idsede',''    
-    // $consulta="exec spV_HCA_Pivot '$fechaini','$fechafin','$plantilla','$idsede','[DESC], [MOTNEG]'";
-
-    $consulta="exec spV_HCA_Pivot '$fechaini','$fechafin','$plantilla','$idsede','".$campos_mpl."'";
-   
-    $sth = $conn->prepare($consulta);
-    $sth->execute();
-    $result = $sth->fetchall(PDO::FETCH_ASSOC);
     $x=1;
-    $y=2;
-    foreach($result as $key=>$row) {
-        foreach($row as $key2=>$row2){
-            $activeSheet->setCellValueByColumnAndRow($x,$y,preg_replace(array('/--/','/\+\+/','/==/'), ' ',$row2));
-            $x++;
-        }
-        $y++;
-        $x=1;
-    }
-	
-    $filename='covidsd';
-    //$activeSheet->setCellValue('A1' , 'New file content')->getStyle('A1')->getFont()->setBold(true);
-    header('Content-Type: application/vnd.ms-excel');
-    header('Content-Disposition: attachment;filename="'. $filename .'.xlsx"'); /*-- $filename is  xsl filename ---*/
-    header('Cache-Control: max-age=0');
-    $Excel_writer->save('php://output');
-    exit;
+    $y++;
+}
+
+$filename='covidsd';
+header('Content-Type: application/vnd.ms-excel');
+header('Content-Disposition: attachment;filename="'. $filename .'.xlsx"'); /*-- $filename is  xsl filename ---*/
+header('Cache-Control: max-age=0');
+$Excel_writer->save('php://output');
+exit;
     
